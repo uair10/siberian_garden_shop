@@ -1,0 +1,29 @@
+[tg_bot]
+token = ""
+admin_ids = [123]
+developer_id = 123
+admin_channel_id = -123
+use_redis = true
+webapp_url = ""
+throttle_time = 1
+
+[db]
+host = "localhost"
+port = 5432
+password = "msketch_bot"
+user = "msketch_bot"
+name = "msketch_bot"
+echo = true
+
+[redis]
+host = "localhost"
+port = 6379
+database = 3
+
+[api]
+host = "127.0.0.1"
+port = 5005
+debug = true
+allowed_origins = ["*"]
+allowed_hosts = ["*"]
+log_level = "info"

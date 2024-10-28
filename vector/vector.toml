@@ -1,0 +1,17 @@
+[sources.docker]
+type = "docker_logs"
+docker_host = "/var/run/docker.sock"
+include_containers = ["dc_shop.tg_bot", "dc_shop.worker", "dc_shop.api", "dc_shop.postgres"]
+
+[sinks.console]
+type = "console"
+inputs = ["docker"]
+encoding.codec = "json"
+
+[sinks.loki_sync_id]
+type = "loki"
+inputs = ["docker"]
+encoding.codec = "json"
+labels.event = "log"
+labels.container_name = "{{container_name}}"
+endpoint = "http://dc_shop.loki:3100"

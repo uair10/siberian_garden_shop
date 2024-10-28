@@ -1,0 +1,41 @@
+line-length = 120
+target-version="py311"
+src = ["dc_shop"]
+
+include = ["dc_shop/**.py", "tests/**.py"]
+
+lint.select = [
+"ALL"
+]
+lint.ignore = [
+   "ARG",
+   "ANN",
+   "D",
+   "EM101",
+   "EM102",
+   "PT001",
+   "PT023",
+   "SIM108",
+   "SIM114",
+   "TRY003",
+   "PLW2901",
+   "RET505",
+   "PLR0913",
+   "TCH001",
+   "TCH002",
+   "TD002",
+   "RUF001",
+   "RUF002",
+   "RUF003",
+   "RUF012",
+   "N999",
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["TID252", "PLR2004", "S101"]
+
+[lint.isort]
+no-lines-before = ["local-folder"]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "parents"

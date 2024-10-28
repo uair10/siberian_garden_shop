@@ -1,0 +1,278 @@
+version: "3.9"
+
+x-media-volume: &media-volume ./media/:${PROJECT_PATH:-/usr/src/app}/media/
+x-config-volume: &config-volume ./config/:${PROJECT_PATH:-/usr/src/app}/config/
+x-resources-volume: &resources-volume ./config/:${PROJECT_PATH:-/usr/src/app}/resources/
+
+services:
+  tg_bot:
+    container_name: "${PROJECT_NAME}.tg_bot"
+    image: "${PROJECT_NAME}.tg_bot"
+    build:
+      context: .
+    restart: unless-stopped
+    stop_signal: SIGINT
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - *media-volume
+      - *config-volume
+    networks:
+      - seeds_shop.postgres.network
+      - seeds_shop.redis.network
+    environment:
+      - TZ=${BOT_TZ}
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+    command: [ "python", "-Om", "seeds_shop.tg_bot" ]
+
+  api:
+    container_name: "${PROJECT_NAME}.api"
+    image: "${PROJECT_NAME}.api"
+    build:
+      context: .
+    restart: unless-stopped
+    expose:
+      - "${API_EXPOSE_PORT}"
+    ports:
+      - "${API_EXPOSE_PORT}:${API_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - *media-volume
+      - *config-volume
+    networks:
+      - seeds_shop.postgres.network
+      - seeds_shop.redis.network
+    environment:
+      - TZ=${API_TZ}
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+    command: ["python", "-Om", "seeds_shop.api"]
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsSL http://localhost:5005/healthcheck/" ]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
+
+  admin_panel:
+    container_name: "${PROJECT_NAME}.admin_panel"
+    image: "${PROJECT_NAME}.admin_panel"
+    build:
+      context: .
+    restart: unless-stopped
+    stop_signal: SIGINT
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${ADMIN_PANEL_EXPOSE_PORT}:5000"
+    volumes:
+      - *media-volume
+      - *config-volume
+    networks:
+      - seeds_shop.postgres.network
+    environment:
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+    command: [ "gunicorn", "seeds_shop.admin_panel.wsgi:app", "--workers", "2", "--threads", "2", "-b", "0.0.0.0:5000" ]
+
+  worker:
+    container_name: "${PROJECT_NAME}.worker"
+    image: "${PROJECT_NAME}.worker"
+    build:
+      context: .
+    restart: unless-stopped
+    stop_signal: SIGINT
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - *media-volume
+      - *config-volume
+      - *resources-volume
+    networks:
+      - seeds_shop.postgres.network
+      - seeds_shop.redis.network
+    environment:
+      - TZ=${WORKER_TZ}
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+    command: [ "python", "-Om", "seeds_shop.worker" ]
+
+  redis:
+    container_name: "${PROJECT_NAME}.redis"
+    image: redis:7.0.10-alpine
+    command:
+      sh -c '
+      redis-server
+      --appendonly yes
+      --bind 0.0.0.0'
+    volumes:
+      - seeds_shop.redis.data:/data:rw
+    ports:
+      - "${REDIS_EXPOSE_PORT}:6379"
+    networks:
+      - seeds_shop.redis.network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
+    environment:
+      - TZ=${REDIS_TZ}
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+
+  postgres_migration:
+    container_name: "${PROJECT_NAME}.postgres_migration"
+    image: "${PROJECT_NAME}.postgres_migration"
+    build:
+      context: .
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - seeds_shop.postgres.network
+    volumes:
+      - .:${PROJECT_PATH:-/usr/src/app}
+      - ./alembic.ini:${PROJECT_PATH:-/usr/src/app}/alembic.ini:ro
+      - *config-volume
+    environment:
+      - CONFIG_PATH=${CONFIG_PATH:-./config/config.prod.toml}
+    command: [ "python", "-m", "alembic", "upgrade", "head" ]
+
+  postgres:
+    container_name: "${PROJECT_NAME}.postgres"
+    image: "postgres:15-alpine"
+    hostname: "${PROJECT_NAME}.postgres"
+    restart: unless-stopped
+    expose:
+      - "5432"
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - seeds_shop.postgres.network
+    environment:
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_DB: $POSTGRES_DB
+      TZ: $POSTGRES_TZ
+      PGTZ: $POSTGRES_TZ
+    volumes:
+      - seeds_shop.postgres.data:/var/lib/postgresql/users:rw
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
+
+  postgres_backup:
+    container_name: "${PROJECT_NAME}.postgres_backup"
+    image: prodrigestivill/postgres-backup-local:15-alpine
+    networks:
+      - seeds_shop.postgres.network
+    environment:
+      - POSTGRES_HOST=${PROJECT_NAME}.postgres
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - BACKUP_DIR=/backups
+      - POSTGRES_EXTRA_OPTS=-Z6 --schema=public -b -a
+      - SCHEDULE=${POSTGRES_BACKUP_SCHEDULE:-@daily}
+      - HEALTHCHECK_PORT=8080
+      - TZ={$POSTGRES_TZ}
+    volumes:
+      - ${POSTGRES_BACKUP_DIR:-./.backups/postgres}:/backups
+
+  pgadmin:
+    container_name: "${PROJECT_NAME}.pgadmin"
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_LISTEN_PORT: 5050
+    volumes:
+      - seeds_shop.pgadmin.data:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_LISTEN_PORT}:5050"
+    expose:
+      - "${PGADMIN_LISTEN_PORT}"
+    networks:
+      - seeds_shop.postgres.network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  grafana:
+    container_name: "${PROJECT_NAME}.grafana"
+    image: grafana/grafana:9.5.2
+    hostname: "${PROJECT_NAME}.grafana"
+    restart: unless-stopped
+    expose:
+      - "3000"
+    ports:
+      - "${GRAFANA_LISTEN_PORT}:3000"
+    networks:
+      - seeds_shop.grafana.network
+    volumes:
+      - seeds_shop.grafana.data:/var/lib/grafana:rw
+      - ./grafana/provisioning:/etc/grafana/provisioning:rw
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - VIRTUAL_HOST=${PROJECT_NAME}.grafana
+      - NETWORK_ACCESS=internal
+      - VIRTUAL_PORT=3000
+
+  loki:
+    container_name: "${PROJECT_NAME}.loki"
+    image: grafana/loki:2.8.2
+    hostname: "${PROJECT_NAME}.loki"
+    expose:
+      - ${LOKI_EXPOSE_PORT}
+    volumes:
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - seeds_shop.loki.data:/tmp/:rw
+    command: -config.file=/etc/loki/config.yaml
+    restart: unless-stopped
+    networks:
+      - seeds_shop.grafana.network
+
+  vector:
+    container_name: "${PROJECT_NAME}.vector"
+    image: timberio/vector:0.29.1-alpine
+    hostname: "${PROJECT_NAME}.vector"
+    restart: unless-stopped
+    expose:
+      - ${VECTOR_EXPOSE_PORT}
+    networks:
+      - seeds_shop.grafana.network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./vector/vector.toml:/etc/vector/vector.toml:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+volumes:
+  seeds_shop.postgres.data: {}
+  seeds_shop.redis.data: {}
+  seeds_shop.pgadmin.data: {}
+  seeds_shop.grafana.data: {}
+  seeds_shop.loki.data: {}
+
+networks:
+  seeds_shop.postgres.network: {}
+  seeds_shop.redis.network: {}
+  seeds_shop.grafana.network: {}

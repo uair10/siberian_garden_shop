@@ -1,0 +1,29 @@
+[tg_bot]
+token = ""
+admin_ids = [123]
+developer_id = 123
+admin_channel_id = -123
+use_redis = true
+webapp_url = ""
+throttle_time = 1
+
+[db]
+host = "siberian_seeds.postgres"
+port = 5432
+password = ""
+user = ""
+name = "siberian_seeds"
+echo = false
+
+[redis]
+host = "siberian_seeds.redis"
+port = 6379
+database = 1
+
+[api]
+host = "0.0.0.0"
+port = 5005
+debug = false
+allowed_origins = ["http://localhost:5173", "http://localhost/"]
+allowed_hosts = ["*.localhost"]
+log_level = "warning"

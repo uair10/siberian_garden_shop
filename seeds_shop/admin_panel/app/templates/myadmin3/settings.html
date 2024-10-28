@@ -1,0 +1,56 @@
+{% extends 'myadmin3/my_master.html' %}
+
+{% block body %}
+    {{ super() }}
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0 text-dark">Settings</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ admin_view.admin.url }}">Home</a></li>
+                        <li class="breadcrumb-item active">Settings</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="section team-section">
+            <div class="row">
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+
+                        <form class="card-body" method="POST" action="{{ url_for('settings.index') }}">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="md-form form-sm mb-0">
+                                        <label for="username">Binance API</label>
+                                        <input type="text" name="username" class="form-control form-control-sm"
+                                               id="username" value="{{ current_user.username }}">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="md-form form-sm mb-0">
+                                        <label for="email">Webmoney API</label>
+                                        <input type="text" name="email" class="form-control form-control-sm" id="email"
+                                               value="{{ current_user.email }}">
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

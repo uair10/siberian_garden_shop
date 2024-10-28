@@ -1,0 +1,138 @@
+{% extends 'myadmin3/my_master.html' %}
+{% import 'flask-admin/static.html' as adminlte_static with context %}
+{% block body %}
+    {{ super() }}
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0 text-dark">Dashboard</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{{ admin_view.admin.url }}">Home</a></li>
+                        <li class="breadcrumb-item active">Dashboard</li>
+                    </ol>
+                    <div class="col-auto ms-auto d-print-none">
+                        <div class='row'>
+                            <div class='col-lg-4'>
+                                <label class='form-label'>Дата от:</label>
+                                <input class='form-control' type='date' name='date' id='datefrom'
+                                       value="{{ dates[0] }}"/>
+                            </div>
+                            <div class='col-lg-4'>
+                                <label class='form-label'>Дата до:</label>
+                                <input class='form-control' type='date' name='date' id='dateto'
+                                       value="{{ dates[-1] }}"/>
+                            </div>
+                            <div class='col-lg-4' style='align-self: flex-end;'>
+                                <button type='button' class='btn btn-primary' id='changeDateButton'>Применить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- ./col -->
+                <div class="col-lg-4 col-6">
+                    <!-- small box -->
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3 id="registered_users">{{ data.registered_users | sum }}</h3>
+                            <p>Зарегистрировано пользователей</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <a href="{{ url_for('users.index_view') }}" class="small-box-footer">Подробнее <i
+                                class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3 id="products_puchased">{{ data.products_puchased | sum }}</h3>
+                            <p>Куплено товаров</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <a href="{{ url_for('products.index_view') }}" class="small-box-footer">Подробнее <i
+                                class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3 id="orders_created">{{ data.orders_created | sum }}</h3>
+                            <p>Создано заказов</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <a href="{{ url_for('orders.index_view') }}" class="small-box-footer">Подробнее <i
+                                class="fas fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <div class="col">
+        <canvas id="stat_chart" data-dates="{{ data.dates }}" data-registered_users="{{ data.registered_users }}"
+                data-orders_created="{{ data.orders_created }}" data-products_puchased="{{ data.products_purchased }}" data-tickets_opened="{{ data.tickets_opened }}"></canvas>
+    </div>
+    <div class="table-responsive">
+        <table id="table_stats" class="table card-table table-vcenter text-nowrap datatable">
+            <thead>
+            <tr>
+                <th class="w-1">Дата</th>
+                <th>Новых пользователей</th>
+                <th>Новых заказов</th>
+                <th>Куплено продуктов</th>
+                <th>Открыто тикетов</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for date, row in table_columns %}
+                <tr>
+                    <td>{{ date }}</td>
+                    {% for column in row %}
+                        <td>{{ column }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            <tr>
+                <td>Всего:</td>
+                {% for column in data.rows_sums %}
+                    <td>{{ column }}</td>
+                {% endfor %}
+            </tr>
+            </tbody>
+        </table>
+    </div>
+{% endblock body %}
+
+{% block tail_js %}
+    {{ super() }}
+    <script>
+        function tableToCSV() {
+            var csv_data = [];
+            var rows = document.getElementsByTagName('tr');
+            for (var i = 0; i < rows.length; i++) {
+                var cols = rows[i].querySelectorAll('td,th');
+                var csvrow = [];
+                for (var j = 0; j < cols.length; j++) {
+                    csvrow.push(cols[j].innerText);
+                }
+                csv_data.push(csvrow.join(","));
+            }
+            csv_data = csv_data.join('\n');
+            downloadCSVFile(csv_data);
+        }
+    </script>
+    <script src="{{ adminlte_static.url('dist/js/charts.js') }}"></script>
+{% endblock tail_js %}

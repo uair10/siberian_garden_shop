@@ -1,0 +1,39 @@
+{% extends 'myadmin3/my_master.html' %}
+
+{% block head %}
+    {{ super() }}
+    {{ dropzone.load_css() }}
+    {{ dropzone.style('border: 2px dashed #0087F7; margin: 5px 0; min-height: 300px;') }}
+{% endblock head %}
+
+{% block body %}
+    {{ super() }}
+    <section class="content-header">
+        <h1>Upload Files</h1>
+    </section>
+    <div class="content">
+        {{ dropzone.create(action='.upload') }}
+        {{ dropzone.load_js() }}
+        {{ dropzone.config() }}
+{#        <button id="upload-btn" class="btn btn-primary" style="margin-left: 0;">{{ _("Upload") }}</button>#}
+        <div class="col-md-12" style="height:45px;"></div>
+    </div>
+{% endblock body %}
+
+{#{% block footer %}#}
+{##}
+{#    {{ dropzone.load_js() }}#}
+{#    {{ dropzone.config(custom_init='dz = this;document.getElementById("upload-btn").addEventListener("click", function handler(e) {dz.processQueue();});',#}
+{#                     custom_options='autoProcessQueue: false, addRemoveLinks: true,') }}#}
+{##}
+{#    <script>#}
+{#        //$(document).ready(function() {#}
+{#        // Register autofill on new selected image upload#}
+{#        //    document.getElementById("upload_img").addEventListener("change", function(){#}
+{#        //        var file = document.getElementById("upload_img").files[0].name;#}
+{#        //        document.getElementById("upload_name").value = file#}
+{#        //    });#}
+{##}
+{#        //} );#}
+{#    </script>#}
+{#{% endblock footer %}#}
