@@ -108,6 +108,7 @@ services:
   redis:
     container_name: "${PROJECT_NAME}.redis"
     image: redis:7.0.10-alpine
+    restart: unless-stopped
     command:
       sh -c '
       redis-server
