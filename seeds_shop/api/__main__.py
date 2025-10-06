@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 async def main() -> None:
     config = load_config(Settings)
-    configure_logging()
+    configure_logging(config.logging)
 
     logger.info("Api launched")
 

@@ -56,10 +56,11 @@ def create_worker_settings(redis_config: RedisConfig) -> dict[str, Any]:
 
 
 async def main():
-    configure_logging()
     container = create_container()
 
     config = await container.get(Settings)
+    configure_logging(config.logging)
+
     worker_settings = create_worker_settings(config.redis)
     worker = create_worker(worker_settings)
     setup_dishka(container, worker_settings=worker)

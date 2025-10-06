@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    configure_logging()
     container = create_container()
     bot = await container.get(Bot)
     dp = await container.get(Dispatcher)
     config = await container.get(Settings)
+    configure_logging(config.logging)
+
     bot_username = await bot.get_me()
     logger.error(f"Starting bot {bot_username}")
 

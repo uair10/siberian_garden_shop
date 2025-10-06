@@ -3,7 +3,7 @@ from flask_babelex import Babel
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
-from seeds_shop.core.config import DbConfig
+from seeds_shop.core.config import Settings
 from seeds_shop.infrastructure.config_loader import load_config
 from seeds_shop.infrastructure.database.models import BaseModel
 from seeds_shop.infrastructure.logger import configure_logging
@@ -14,11 +14,11 @@ babel = Babel()
 
 
 def create_app() -> Flask:
-    config = load_config(DbConfig, "db")
-    configure_logging()
+    config = load_config(Settings)
+    configure_logging(config.logging)
 
     app = Flask(__name__, instance_relative_config=True)
-    app.config["SQLALCHEMY_DATABASE_URI"] = config.full_url(with_driver=False)
+    app.config["SQLALCHEMY_DATABASE_URI"] = config.db.full_url(with_driver=False)
 
     from seeds_shop.admin_panel import config
 

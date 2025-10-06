@@ -52,6 +52,11 @@ class ApiConfig(BaseModel):
         return json.loads(v)
 
 
+class LoggingConfig(BaseModel):
+    render_json_logs: bool = False
+    level: str = "DEBUG"
+
+
 class TgBotConfig(BaseModel):
     token: str
     admin_ids: list[int]
@@ -71,3 +76,4 @@ class Settings(BaseModel):
     db: DbConfig
     redis: RedisConfig
     api: ApiConfig
+    logging: LoggingConfig
