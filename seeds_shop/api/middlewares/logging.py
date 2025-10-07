@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Awaitable, Callable
 
@@ -11,9 +12,23 @@ async def logging_middleware(request: Request, call_next: Callable[[Request], Aw
     """Logging request body, query and headers"""
 
     request_body = None
-    if "application/json" in request.headers.get("content-type", ""):
+    if request.method in ("POST", "PUT", "PATCH") and "application/json" in request.headers.get("content-type", ""):
         try:
-            request_body = await request.json()
+            # Читаем тело частями и собираем
+            body_chunks = []
+            async for chunk in request.stream():
+                body_chunks.append(chunk)
+
+            if body_chunks:
+                body_bytes = b"".join(body_chunks)
+                request_body = json.loads(body_bytes)
+
+                # Восстанавливаем поток
+                async def receive():
+                    return {"type": "http.request", "body": body_bytes}
+
+                request._receive = receive
+
         except Exception as e:
             logger.error(f"Error reading request JSON: {e}")
 
